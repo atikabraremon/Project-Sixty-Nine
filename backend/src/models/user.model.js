@@ -16,6 +16,16 @@ const userSchema = new Schema(
       lowercase: true,
       unique: true,
       trim: true,
+      index: true,
+    },
+    email: {
+      type: String,
+      required: [true, "Email is required"],
+      lowercase: true,
+      unique: true,
+      trim: true,
+      index: true,
+      match: [/^\S+@\S+\.\S+$/, "Please use a valid email address"],
     },
     password: {
       type: String,
@@ -64,7 +74,7 @@ userSchema.methods.generateAccessToken = function () {
       _id: this._id,
       username: this.username,
       role: this.role,
-      isVerified: this.isVerified
+      isVerified: this.isVerified,
     },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: process.env.ACCESS_TOKEN_EXPIRY } // 1d
@@ -78,7 +88,7 @@ userSchema.methods.generateRefreshToken = function () {
     },
     process.env.REFRESH_TOKEN_SECRET,
     {
-      expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
+      expiresIn: process.env.REFRESH_TOKEN_EXPIRY, // 10d
     }
   );
 };

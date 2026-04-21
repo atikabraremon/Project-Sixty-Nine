@@ -20,13 +20,13 @@ const seedSuperAdmin = async () => {
     }
 
     // 3. Hash Password (Securely)
-    const hashedPassword = await bcrypt.hash("root", 16);
+    const hashedPassword = await bcrypt.hash("root", 14);
 
     // 4. Create Super Admin
     const superAdmin = new User({
       name: "Super Admin",
       username: "root",
-      email: "admin@xcinema.com",
+      email: "root@9xporn.com",
       password: hashedPassword,
       role: "super-admin",
       isVerified: true,
