@@ -1,9 +1,7 @@
-
-import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-
-
+import jwt from "jsonwebtoken";
+import User from "../models/user.model.js";
 
 export const isAdmin = (req, res, next) => {
   if (req.user.role !== "admin" && req.user.role !== "super-admin") {
@@ -12,16 +10,14 @@ export const isAdmin = (req, res, next) => {
   next();
 };
 
-
 export const isSuperAdmin = (req, res, next) => {
   if (req.user.role !== "super-admin") {
-    return res.status(403).json({ message: "Access denied. Super Admin only." });
+    return res
+      .status(403)
+      .json({ message: "Access denied. Super Admin only." });
   }
   next();
 };
-
-
-
 
 export const verifyJWT = asyncHandler(async (req, _, next) => {
   const token =
