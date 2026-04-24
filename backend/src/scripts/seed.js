@@ -2,12 +2,15 @@ import mongoose from "mongoose";
 import "dotenv/config";
 import dotenv from "dotenv";
 import bcrypt from "bcrypt";
+import dns from "node:dns/promises";
 import User from "../models/user.model.js";
+
+dns.setServers(["1.1.1.1", "8.8.8.8"]);
 
 const seedSuperAdmin = async () => {
   try {
     // 1. Database Connection
-    await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connect(`${process.env.MONGODB_URI}/${process.env.DB_NAME}`);
     console.log("📦 Connected to MongoDB for seeding...");
 
     // 2. Check if Super Admin already exists
@@ -18,15 +21,12 @@ const seedSuperAdmin = async () => {
       process.exit(0); // Success exit
     }
 
-    // 3. Hash Password (Securely)
-    const hashedPassword = await bcrypt.hash("root", 14);
-
     // 4. Create Super Admin
     const superAdmin = new User({
-      name: "Super Admin",
+      fullName: "Super Admin",
       username: "root",
-      email: "root@9xporn.com",
-      password: hashedPassword,
+      email: "root@exmaple.com",
+      password: "123456",
       role: "super-admin",
       isVerified: true,
     });

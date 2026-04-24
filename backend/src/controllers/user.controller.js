@@ -3,6 +3,8 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
+import { uploadSingleToR2 } from "../services/upload.service.js";
+import { deleteFromR2 } from "../services/delete.service.js";
 
 const generateAccessAndRefreshTokens = async (userId) => {
   try {
@@ -23,75 +25,70 @@ const generateAccessAndRefreshTokens = async (userId) => {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  // Get user details from frontend
-  // validation - not empty.
-  // check if user all ready exist: username and email.
-  // check for images, check for avatar.
-  // upload them to cloudinary, avatar.
-  // crate user object - create entry8 in db
-  // remove password and refresh token filed for response.
-  // check for user creation
-  // return res
+  const { fullName, email, username, password } = req.body;
 
-  const { fullname, email, username, password } = req.body;
-
+  // ১. বেসিক ফিল্ড চেক (ফুল নেম, ইমেইল, ইউজারনেম, পাসওয়ার্ড)
   if (
-    [fullname, password, email, username].some((filed) => filed?.trim() === "")
+    [fullName, password, email, username].some((field) => field?.trim() === "")
   ) {
-    throw new ApiError(400, "All filed are required");
+    throw new ApiError(
+      400,
+      "Full Name, Email, Username and Password are required"
+    );
   }
 
-  const existedUser = await User.findOne({
-    $or: [{ username }, { email }],
-  });
-
+  // ২. ইউজার আগে থেকে আছে কি না চেক
+  const existedUser = await User.findOne({ $or: [{ username }, { email }] });
   if (existedUser) {
     throw new ApiError(400, "User with email or username already exists");
   }
 
-  let avatarLocalPath;
+  const avatarFile = req.files?.avatar?.[0] || req.files?.avatarFile?.[0];
 
-  if (
-    req.files &&
-    Array.isArray(req.files.avatar) &&
-    req.files.avatar.length > 0
-  ) {
-    avatarLocalPath = req.files?.avatar[0]?.path;
+  let avatarKey = "";
+  if (avatarFile) {
+    const avatarUpload = await uploadSingleToR2(avatarFile, "users/avatar");
+    if (!avatarUpload.success) {
+      throw new ApiError(500, "Failed to upload avatar to R2");
+    }
+    avatarKey = avatarUpload.key; // আপলোড সফল হলে কী (key) স্টোর করা
   }
 
-  const avatar = await uploadMultipleToR2(avatarLocalPath);
+  // ৫. ডাটাবেসে ইউজার তৈরি
+  try {
+    const user = await User.create({
+      fullName,
+      avatar: avatarKey,
+      email,
+      password,
+      username: username.toLowerCase(),
+    });
 
-  console.log(avatar);
+    const createdUser = await User.findById(user._id).select(
+      "-password -refreshToken"
+    );
 
-  const user = await User.create({
-    fullname,
-    // avatar: avatar.url,
-    email,
-    password,
-    username: username.toLowerCase(),
-  });
+    if (!createdUser) {
+      throw new ApiError(
+        500,
+        "Something went wrong while registering the user"
+      );
+    }
 
-  const createdUser = await User.findById(user._id).select(
-    "-password -refreshToken"
-  );
+    return res
+      .status(201)
+      .json(new ApiResponse(201, createdUser, "User Registered Successfully"));
+  } catch (dbError) {
+    // রোলব্যাক: যদি ডাটাবেসে সেভ হতে সমস্যা হয় এবং ফাইল আপলোড হয়ে থাকে, তবে ডিলিট করে দাও
+    if (avatarKey) {
+      await deleteFromR2(avatarKey);
+    }
 
-  if (!createdUser) {
-    throw new ApiError(500, "Something went wrong registering the user");
+    throw new ApiError(400, dbError?.message || "Registration failed");
   }
-
-  return res
-    .status(201)
-    .json(new ApiResponse(201, createdUser, "User Registered Successfully"));
 });
 
 const loginUser = asyncHandler(async (req, res) => {
-  // req body -> data
-  // username or email
-  // find the user
-  // password check
-  // access and refresh token generator
-  // send cookies
-
   const { email, username, password } = req.body;
 
   if (!username && !email) {
@@ -104,7 +101,11 @@ const loginUser = asyncHandler(async (req, res) => {
 
   const user = await User.findOne({
     $or: [{ username }, { email }],
-  });
+  }).select("+password");
+
+  if (!user.isVerified) {
+    throw new ApiError(404, "Your account is not verified.");
+  }
 
   if (!user) {
     throw new ApiError(404, "User does not exist");
@@ -213,23 +214,6 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
   }
 });
 
-// const changeCurrentPassword = asyncHandler(async (req, res) => {
-//   const { oldPassword, newPassword } = req.body;
-//   const user = await User.findById(req.user?._id);
-
-//   const isPasswordCorrect = await user.isPasswordCorrect(oldPassword);
-
-//   if (!isPasswordCorrect) {
-//     throw new ApiError(400, "Invalid old password.");
-//   }
-
-//   user.password = newPassword;
-//   await user.save({ validateBeforeSave: true });
-//   return res
-//     .status(200)
-//     .json(new ApiResponse(200, {}, "Password changed successfully "));
-// });
-
 const changeCurrentPassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
   const user = await User.findById(req.user?._id);
@@ -255,50 +239,17 @@ const getCurrentUser = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, req.user, "Current user fetched successfully"));
 });
 
-// const updateAccountDetails = asyncHandler(async (req, res) => {
-//   const { fullname, username, email } = req.body;
-
-//   if (!fullname || !email || !username) {
-//     throw new ApiError(400, "");
-//   }
-
-//   // const user = await User.findByIdAndUpdate(
-//   //   req.user?._id,
-//   //   {},
-//   //   {
-//   //     $set: {
-//   //       fullname,
-//   //       email,
-//   //       username,
-//   //     },
-//   //   },
-//   //   { new: true }
-//   // ).select("-password");
-
-//   const user = await User.findByIdAndUpdate(
-//     req.user?._id,
-//     {
-//       $set: { fullname, email, username },
-//     },
-//     { new: true }
-//   ).select("-password");
-
-//   return res
-//     .status(200)
-//     .json(new ApiResponse(200, user, "Account details updated successfully."));
-// });
-
 const updateAccountDetails = asyncHandler(async (req, res) => {
-  const { fullname, username, email } = req.body;
+  const { fullName, username, email } = req.body;
 
-  if (!fullname || !email || !username) {
+  if (!fullName || !email || !username) {
     throw new ApiError(400, "All fields are required");
   }
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
-      $set: { fullname, email, username },
+      $set: { fullName, email, username },
     },
     { new: true }
   ).select("-password");
@@ -309,40 +260,35 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
-  const avatarLocalPath = req.file?.path;
+  // multer.single('avatar') ব্যবহার করলে ফাইল req.file এ থাকে
+  const avatarFile = req.file;
 
-  if (!avatarLocalPath) {
+  if (!avatarFile) {
     throw new ApiError(400, "Avatar file is missing");
   }
 
-  const avatar = await uploadMultipleToR2(avatarLocalPath);
+  // R2 তে আপলোড
+  const avatarUpload = await uploadSingleToR2(avatarFile, "avatars");
 
-  if (!avatar.url) {
-    throw new ApiError(400, "Error while uploading avatar");
+  if (!avatarUpload.success) {
+    throw new ApiError(500, "Error while uploading avatar to R2");
   }
 
-  const user = await User.findById(req.user?._id);
-  const oldAvatarUrl = user?.avatar;
-
+  // ডাটাবেস আপডেট
   const updatedUser = await User.findByIdAndUpdate(
-    req.user._id,
+    req.user?._id,
     {
       $set: {
-        avatar: avatar.url,
+        avatar: avatarUpload.url,
       },
     },
     { new: true }
   ).select("-password");
 
-  // if (oldAvatarUrl) {
-  //   await OldFileRemover(oldAvatarUrl);
-  // }
-
   return res
     .status(200)
     .json(new ApiResponse(200, updatedUser, "Avatar updated successfully"));
 });
-
 export {
   registerUser,
   loginUser,

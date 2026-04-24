@@ -1,19 +1,23 @@
 class ApiError extends Error {
-  constructor({
-    statusCode = 500,
-    message = "Something went wrong",
-    code = "INTERNAL_ERROR",
+  constructor(
+    statusCode,
+    message = "Something Went Wrong",
     errors = [],
-  }) {
+    stack = ""
+  ) {
     super(message);
-
     this.statusCode = statusCode;
-    this.success = false;
-    this.code = code;
-    this.errors = errors;
     this.data = null;
+    this.message = message;
+    this.success = false;
+    this.errors = errors;
 
-    Error.captureStackTrace(this, this.constructor);
+    if (stack) {
+      this.stack = stack;
+    } else {
+      // Stack trace capture korle debug kora easy hoy
+      Error.captureStackTrace(this, this.constructor);
+    }
   }
 }
 

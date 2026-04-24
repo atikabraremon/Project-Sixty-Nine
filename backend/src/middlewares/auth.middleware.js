@@ -3,20 +3,29 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
 
-export const isAdmin = (req, res, next) => {
-  if (req.user.role !== "admin" && req.user.role !== "super-admin") {
-    return res.status(403).json({ message: "Access denied. Admins only." });
-  }
-  next();
-};
+export const restrictTo = (...roles) => {
+  return (req, res, next) => {
+    // 1. User login check (Auth middleware er por eita use korben)
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required. Please login.",
+        errorCode: "AUTH_REQUIRED",
+      });
+    }
 
-export const isSuperAdmin = (req, res, next) => {
-  if (req.user.role !== "super-admin") {
-    return res
-      .status(403)
-      .json({ message: "Access denied. Super Admin only." });
-  }
-  next();
+    // 2. Role permission check
+    // user.role jodi roles array er moddhe thake, tobe access pabe
+    if (!roles.includes(req.user.role)) {
+      return res.status(403).json({
+        success: false,
+        message: "You do not have permission to perform this action",
+        errorCode: "FORBIDDEN_ACCESS",
+      });
+    }
+
+    next();
+  };
 };
 
 export const verifyJWT = asyncHandler(async (req, _, next) => {
