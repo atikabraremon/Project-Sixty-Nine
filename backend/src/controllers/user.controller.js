@@ -99,24 +99,29 @@ const loginUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Password is required.");
   }
 
+  // 1. User khunje ber kora
   const user = await User.findOne({
     $or: [{ username }, { email }],
   }).select("+password");
 
-  if (!user.isVerified) {
-    throw new ApiError(404, "Your account is not verified.");
-  }
-
+  // 2. Prothome check korun user database-e ache kina (IMPORTANT)
   if (!user) {
     throw new ApiError(404, "User does not exist");
   }
 
+  // 3. Tarpor check korun user verified kina
+  if (!user.isVerified) {
+    throw new ApiError(401, "Your account is not verified.");
+  }
+
+  // 4. Password check kora
   const isPasswordValid = await user.isPasswordCorrect(password);
 
   if (!isPasswordValid) {
-    throw new ApiError(400, "Invalid user credentials");
+    throw new ApiError(401, "Invalid user credentials");
   }
 
+  // --- Baki code same thakbe ---
   const { accessToken, refreshToken } = await generateAccessAndRefreshTokens(
     user._id
   );
