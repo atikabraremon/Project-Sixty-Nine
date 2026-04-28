@@ -79,7 +79,6 @@ const registerUser = asyncHandler(async (req, res) => {
       .status(201)
       .json(new ApiResponse(201, createdUser, "User Registered Successfully"));
   } catch (dbError) {
-    // রোলব্যাক: যদি ডাটাবেসে সেভ হতে সমস্যা হয় এবং ফাইল আপলোড হয়ে থাকে, তবে ডিলিট করে দাও
     if (avatarKey) {
       await deleteFromR2(avatarKey);
     }
@@ -105,8 +104,13 @@ const loginUser = asyncHandler(async (req, res) => {
   }).select("+password");
 
   // 2. Prothome check korun user database-e ache kina (IMPORTANT)
+  // if (!user) {
+  //   throw new ApiError(404, "User does not exist");
+  // }
+
+  // eita publisher jonno dite hobe
   if (!user) {
-    throw new ApiError(404, "User does not exist");
+    throw new ApiError(404, "Invalid user credentials");
   }
 
   // 3. Tarpor check korun user verified kina

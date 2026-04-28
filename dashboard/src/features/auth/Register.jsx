@@ -4,12 +4,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { registerUser } from "../../services/apiService";
 import InputField from "../../shared/inputField/InputField";
 import SubmitButton from "../../shared/buttons/SubmitButton";
-import FormError from "../../shared/components/FormError";
 
-const Register = () => {
+const Register = ({ setAlert }) => {
   const navigate = useNavigate();
-  const [serverError, setServerError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [imagePreview, setImagePreview] = useState(null);
 
   const {
     register,
@@ -17,8 +16,15 @@ const Register = () => {
     formState: { errors },
   } = useForm();
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
   const onRegister = async (data) => {
-    setServerError(null);
+    setAlert({ message: "", type: "" });
     setLoading(true);
 
     try {
@@ -32,120 +38,132 @@ const Register = () => {
         formData.append("avatar", data.avatar[0]);
       }
 
-      const result = await registerUser(formData);
-      console.log(result);
+      const response = await registerUser(formData);
 
-      // Jodi toast thake tobe toast use kora bhalo, na hole alert
-      alert("Registration Successful!");
-      navigate("/login");
+      if (response) {
+        setAlert({ message: "Account created successfully!", type: "success" });
+        navigate("/login");
+      }
     } catch (error) {
-      const errMsg =
-        error.response?.data?.message ||
-        error.message ||
-        "Registration failed!";
-      setServerError(errMsg);
+      console.error("Register Error:", error);
+      const errMsg = error.response?.data?.message || "Registration failed!";
+      setAlert({ message: errMsg, type: "error" });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    // 'py-12' added for better spacing on mobile and small laptops
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4 py-12 overflow-y-auto">
-      {/* Container width changed to 'max-w-md' for better readability */}
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4 py-12">
       <div className="bg-white p-8 rounded-xl shadow-lg w-full max-w-md border border-gray-100">
-        <h2 className="text-3xl font-extrabold mb-2 text-center text-gray-800">
-          Create Account
-        </h2>
-        <p className="text-center text-gray-500 mb-6 text-sm">
-          Secure access for authorized administrators only.
-        </p>
+        {/* Header Section */}
+        <div className="text-center mb-6">
+          <h2 className="text-3xl font-extrabold text-gray-800">
+            Create Account
+          </h2>
+          <p className="text-gray-500 text-sm mt-1">
+            Join us today! It only takes a minute.
+          </p>
+        </div>
 
-        {/* Server Error Box */}
-        <FormError message={serverError} onClose={() => setServerError(null)} />
+        {/* --- Circle Image Preview Section --- */}
+        <div className="flex justify-center mb-6">
+          <div className="relative">
+            <label className="cursor-pointer block">
+              <div className="w-24 h-24 rounded-full border-4 border-blue-500 overflow-hidden bg-gray-100 flex items-center justify-center shadow-md hover:opacity-80 transition">
+                {imagePreview ? (
+                  <img
+                    src={imagePreview}
+                    alt="Preview"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <svg
+                    className="w-12 h-12 text-gray-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                )}
+              </div>
+              {/* Hidden File Input */}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                {...register("avatar")}
+                onChange={(e) => {
+                  register("avatar").onChange(e);
+                  handleImageChange(e);
+                }}
+              />
+            </label>
+            {/* Small Plus Icon */}
+            <div className="absolute bottom-0 right-0 bg-blue-600 text-white rounded-full p-1 border-2 border-white">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="3"
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
 
-        <form onSubmit={handleSubmit(onRegister)} className="space-y-4 mt-2">
-          {/* Full Name - Type changed to text */}
+        {/* Form Section */}
+        <form onSubmit={handleSubmit(onRegister)} className="space-y-4">
           <InputField
             label="Full Name"
-            type="text"
             name="fullName"
-            placeholder="John Doe"
             register={register}
             validation={{ required: "Full name is required" }}
             errors={errors}
           />
 
-          {/* Username - Type changed to text */}
           <InputField
             label="Username"
-            type="text"
             name="username"
-            placeholder="johndoe123"
             register={register}
             validation={{ required: "Username is required" }}
             errors={errors}
           />
 
-          {/* Email */}
           <InputField
             label="Email"
             type="email"
             name="email"
-            placeholder="example@mail.com"
             register={register}
-            validation={{
-              required: "Email is required",
-              pattern: {
-                value: /^\S+@\S+$/i,
-                message: "Invalid email format",
-              },
-            }}
+            validation={{ required: "Email is required" }}
             errors={errors}
           />
 
-          {/* Avatar - Improved styling */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
-              Profile Picture{" "}
-              <span className="text-gray-400 font-normal">(Optional)</span>
-            </label>
-            <div className="flex items-center justify-center w-full">
-              <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <p className="text-xs text-gray-500">Click to upload image</p>
-                </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  {...register("avatar")}
-                />
-              </label>
-            </div>
-          </div>
-
-          {/* Password */}
           <InputField
             label="Password"
             type="password"
             name="password"
-            placeholder="******"
             register={register}
-            validation={{
-              required: "Password is required",
-              minLength: { value: 6, message: "Min 6 chars" },
-            }}
+            validation={{ required: "Password is required", minLength: 6 }}
             errors={errors}
           />
 
-          {/* Submit Button */}
           <div className="pt-2">
             <SubmitButton loading={loading} text="Sign Up" variant="blue" />
           </div>
         </form>
 
-        <div className="mt-8 text-center border-t pt-4">
+        <div className="mt-6 text-center border-t pt-4">
           <p className="text-gray-600 text-sm">
             Already have an account?{" "}
             <Link
