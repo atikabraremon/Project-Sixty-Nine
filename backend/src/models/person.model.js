@@ -50,6 +50,12 @@ const personSchema = new mongoose.Schema(
     isVerified: { type: Boolean, default: true },
     isTrending: { type: Boolean, default: false },
 
+    priority: {
+      type: Number,
+      default: 0,
+      index: true,
+    },
+
     // 🔹 Professional Info
     knownFor: {
       type: [String],

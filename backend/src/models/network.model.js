@@ -52,6 +52,12 @@ const networkSchema = new mongoose.Schema(
       index: true,
     },
 
+    priority: {
+      type: Number,
+      default: 0,
+      index: true,
+    },
+
     // 🔹 Hierarchy
     parentNetwork: {
       type: mongoose.Schema.Types.ObjectId,
