@@ -1,4 +1,5 @@
-import { getDirectSingleUploadUrl } from "../services/r2DirectUpload.service";
+import { getDirectSingleUploadUrl } from "../services/r2DirectUpload.service.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
 export const getUploadUrl = asyncHandler(async (req, res) => {
   const { fileName, contentType, folder } = req.body;

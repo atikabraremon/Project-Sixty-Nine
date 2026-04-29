@@ -1,14 +1,11 @@
 import { z } from "zod";
 
 export const networkValidationSchema = z.object({
-  name: z
-    .string({ required_error: "Network name is required" })
-    .trim()
-    .min(1, "Name cannot be empty"),
-
+  name: z.string().trim().min(1, "Name is required"),
   status: z.enum(["Active", "Defunct", "Hidden"]).default("Active"),
-
   isVerified: z.boolean().default(true),
+  // foundedDate fix:
+  foundedDate: z.coerce.date().optional().nullable(),
 
   media: z
     .object({
@@ -27,27 +24,14 @@ export const networkValidationSchema = z.object({
     })
     .optional(),
 
-  foundedDate: z.string().datetime().optional().nullable(),
-
   location: z.string().optional(),
-
-  website: z.string().url("Invalid website URL").optional().or(z.literal("")),
-
-  type: z.enum(["Network", "Studio", "Site", "Production House"], {
-    required_error: "Network type is required",
-  }),
-
-  priority: z
-    .number()
-    .int("Priority must be an integer") // Eita ensure korbe jeno decimal (1.5) na hoy
-    .default(0)
-    .optional(),
+  website: z.string().url().optional().or(z.literal("")),
+  type: z.enum(["Network", "Studio", "Site", "Production House"]),
+  priority: z.number().int().default(0),
 
   parentNetwork: z
     .string()
-    .refine((val) => /^[0-9a-fA-F]{24}$/.test(val), {
-      message: "Invalid parentNetwork MongoDB ID",
-    })
+    .regex(/^[0-9a-fA-F]{24}$/, "Invalid ID")
     .optional()
     .nullable(),
 

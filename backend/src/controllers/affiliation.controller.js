@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 import { Affiliation } from "../models/affiliation.model.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { ApiResponse } from "../utils/ApiResponse.js";
 
 /**
  * @desc    Toggle Affiliation (Add or Remove)
@@ -42,10 +44,9 @@ export const toggleAffiliation = asyncHandler(async (req, res) => {
     roleInNetwork: roleInNetwork || "Actor",
   });
 
-  res.status(201).json({
-    success: true,
-    action: "added",
-    data: newAffiliation,
-    message: "Affiliation added successfully",
-  });
+  res
+    .status(201)
+    .json(
+      new ApiResponse(201, newAffiliation, "Affiliation added successfully")
+    );
 });

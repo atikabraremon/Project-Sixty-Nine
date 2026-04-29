@@ -19,6 +19,7 @@ const affiliationSchema = new Schema(
       default: "Actor",
       trim: true,
     },
+    priority: { type: Number, default: 0, index: true },
   },
   {
     timestamps: true,

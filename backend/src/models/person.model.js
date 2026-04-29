@@ -106,6 +106,8 @@ const personSchema = new mongoose.Schema(
 
 // --- Indexes ---
 personSchema.index({ name: "text" });
+// Index on knownFor field along with sorting fields
+personSchema.index({ knownFor: 1, priority: -1, createdAt: -1 });
 
 // --- ❗ Virtual Populate (Ei connection ta bad porechilo) ---
 personSchema.virtual("videos", {
